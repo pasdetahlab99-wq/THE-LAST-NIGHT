@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>THE LAST NIGHT</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#050608;color:#eee;font-family:Arial;overflow:hidden}canvas{display:block;width:100vw;height:100vh;touch-action:none}
+#hud{position:fixed;inset:0;pointer-events:none;text-shadow:0 2px 5px #000}#top{position:absolute;top:12px;left:14px;font-size:13px;letter-spacing:2px;color:#d9d9d9}#status{position:absolute;top:34px;left:14px;color:#c33;font-weight:bold}#hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:12px;color:#bbb}
+#start{position:fixed;inset:0;background:radial-gradient(#202329,#030405 70%);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center}h1{letter-spacing:7px;color:#b9b9b9;font-size:clamp(25px,6vw,52px);margin:0 0 8px}p{color:#999}button{background:#761d20;color:white;border:1px solid #a44;padding:14px 28px;font-size:16px;letter-spacing:2px}
+#pad{position:fixed;bottom:28px;left:24px;display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px;gap:4px;opacity:.55}#pad button{padding:0;background:#16191d;border:1px solid #555;font-size:22px;touch-action:none}#look{position:fixed;right:0;top:0;width:55vw;height:75vh}
+</style></head><body>
+<canvas id="game"></canvas><div id="hud"><div id="top">THE LAST NIGHT · CHAPTER 01</div><div id="status">HEALTH 100%　|　FLASHLIGHT ON</div><div id="hint">FIND THE EXIT · AVOID THE CREATURE</div></div>
+<div id="pad"><span></span><button data-k="forward">▲</button><span></span><button data-k="left">◀</button><button data-k="back">▼</button><button data-k="right">▶</button></div><div id="look"></div>
+<div id="start"><h1>THE LAST NIGHT</h1><p>A survival horror experience</p><p>Explore the abandoned village. Find the exit.</p><button id="play">ENTER THE NIGHT</button><small style="margin-top:18px;color:#777">Mobile controls · Prototype 0.1</small></div>
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d');let W,H,started=false,x=2.5,y=2.5,a=0,health=100,keys={},enemy={x:8.5,y:7.5},won=false;
+const map=["111111111111","100000000001","101110110101","100010000001","101010111101","100000100001","111010101101","100000000001","101110110101","100000000001","111111111111"];
+function resize(){W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio}onresize=resize;resize();
+function wall(px,py){return map[Math.floor(py)]?.[Math.floor(px)]!=="0"}
+function loop(){requestAnimationFrame(loop);if(!started)return;
+let speed=.035;if(keys.forward){let nx=x+Math.cos(a)*speed,ny=y+Math.sin(a)*speed;if(!wall(nx,y))x=nx;if(!wall(x,ny))y=ny}if(keys.back){let nx=x-Math.cos(a)*speed,ny=y-Math.sin(a)*speed;if(!wall(nx,y))x=nx;if(!wall(x,ny))y=ny}if(keys.left)a-=.045;if(keys.right)a+=.045;
+let dx=enemy.x-x,dy=enemy.y-y,d=Math.hypot(dx,dy);if(d>1.0){enemy.x-=dx/d*.008;enemy.y-=dy/d*.008}else{health=Math.max(0,health-.08);document.getElementById('status').textContent='HEALTH '+Math.ceil(health)+'%　|　DANGER';}
+ctx.fillStyle='#080a0d';ctx.fillRect(0,0,W,H);ctx.fillStyle='#17191d';ctx.fillRect(0,H*.5,W,H*.5);
+for(let i=0;i<W;i+=2){let ra=a+(i/W-.5)*1.15,dist=0,hit=false;while(dist<16&&!hit){dist+=.025;hit=wall(x+Math.cos(ra)*dist,y+Math.sin(ra)*dist)}let h=Math.min(H,H/(dist*.85));let shade=Math.max(12,100-dist*7);ctx.fillStyle=`rgb(${shade*.65},${shade*.72},${shade})`;ctx.fillRect(i,(H-h)/2,2,h)}
+let ex=enemy.x-x,ey=enemy.y-y,ed=Math.hypot(ex,ey),ang=Math.atan2(ey,ex)-a;while(ang>Math.PI)ang-=Math.PI*2;while(ang< -Math.PI)ang+=Math.PI*2;if(Math.abs(ang)<.65&&ed<9){let sx=W*(.5+ang/1.15),sz=Math.min(H,H/(ed*.75));ctx.fillStyle='#090303';ctx.beginPath();ctx.ellipse(sx,H/2,sz*.22,sz*.42,0,0,7);ctx.fill();ctx.fillStyle='#b21e22';ctx.fillRect(sx-sz*.1,H/2-sz*.16,sz*.055,sz*.025);ctx.fillRect(sx+sz*.045,H/2-sz*.16,sz*.055,sz*.025)}
+let g=ctx.createRadialGradient(W/2,H/2,20,W/2,H/2,W*.55);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.92)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+if(x>9&&y>8){won=true;ctx.fillStyle='#fff';ctx.font='bold 36px Arial';ctx.textAlign='center';ctx.fillText('YOU ESCAPED',W/2,H/2)}
+if(health<=0){ctx.fillStyle='rgba(80,0,0,.75)';ctx.fillRect(0,0,W,H);ctx.fillStyle='white';ctx.font='bold 34px Arial';ctx.textAlign='center';ctx.fillText('YOU WERE CAUGHT',W/2,H/2)}
+}
+document.getElementById('play').onclick=()=>{started=true;document.getElementById('start').style.display='none'};
+document.querySelectorAll('[data-k]').forEach(b=>{let k=b.dataset.k;b.onpointerdown=e=>{keys[k]=true;b.setPointerCapture(e.pointerId)};b.onpointerup=b.onpointercancel=()=>keys[k]=false});
+let look=document.getElementById('look'),last=null;look.onpointerdown=e=>last=e.clientX;look.onpointermove=e=>{if(last!==null){a+=(e.clientX-last)*.006;last=e.clientX}};look.onpointerup=look.onpointercancel=()=>last=null;
+loop();
+</script></body></html>
